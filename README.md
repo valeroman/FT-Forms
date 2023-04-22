@@ -1108,3 +1108,497 @@ class BlocCounterView extends StatelessWidget {
 }
 
 ```
+
+### Manejo de Formularios
+
+- Creamos el archivo `register_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: const _RegisterView(),
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Placeholder();
+  }
+}
+```
+
+- Agregamos la nueva ruta en `app_router.dart`
+
+```dart
+
+import 'package:forms_app/presentation/screens/screens.dart';
+import 'package:go_router/go_router.dart';
+
+final appRouter = GoRouter(
+  routes: [
+
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomeScreen(),
+    ),
+
+    GoRoute(
+      path: '/cubits',
+      builder: (context, state) => const CubitCounterScreen(),
+    ),
+
+    GoRoute(
+      path: '/counter-bloc',
+      builder: (context, state) => const BlocCounterScreen(),
+    ),
+
+    GoRoute(        // -> Agregamos la nueva ruta 
+      path: '/new-user',
+      builder: (context, state) => const RegisterScreen(),
+    )
+
+  ]
+);
+```
+
+- Agregamos el `ListTile` en el `ListView`, dentro del archivo `home_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: ListView(
+        children: [
+
+          ListTile(
+            title: const Text('Cubits'),
+            subtitle: const Text('Gestor de estado simple'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded),
+            onTap: () {
+              context.push('/cubits');
+            },
+          ),
+
+          ListTile(
+            title: const Text('BLoC'),
+            subtitle: const Text('Gestor de estado compuesto'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded),
+            onTap: () {
+              context.push('/counter-bloc');
+            },
+          ),
+
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            child: Divider(),
+          ),
+
+           ListTile(        // -> Se agrego el nuevo ListTile
+            title: const Text('Nuevo usuario'),
+            subtitle: const Text('manejo de formularios'),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded),
+            onTap: () {
+              context.push('/new-user');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+#### Consideraciones con Inputs y Scroll
+
+- Cuando se tiene un input dentro de un Column, es necesario utilizar el widget `SingleChildScrollView`, para que se puede hacer scroll cuando se muestra el teclado
+
+- Abrimos el archivo `register_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: const _RegisterView(),
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+        
+              const FlutterLogo( size: 300 ),
+        
+              TextFormField(),
+              TextFormField(),
+              TextFormField(),
+              TextFormField(),
+
+              const SizedBox(height: 20),
+
+              FilledButton.tonalIcon(
+                onPressed: () {}, 
+                icon: const Icon( Icons.save ), 
+                label: const Text('Crear usuario')
+              ),
+
+              const SizedBox(height: 100)
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+#### Diseño de campo de texto
+
+- Creamos un archivo `custom_text_form_field.dart` dentro de la carpeta `presentation -> widgets -> inputs`
+
+- Ahi vamos personalizando nuestro `CustomTextFormField`
+
+```dart
+import 'package:flutter/material.dart';
+
+class CustomTextFormField extends StatelessWidget {
+
+  const CustomTextFormField({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+
+    final colors = Theme.of(context).colorScheme;
+
+    final border = OutlineInputBorder(
+      // borderSide: BorderSide(color: colors.primary),
+      borderRadius: BorderRadius.circular(40)
+    );
+
+    return TextFormField(
+      onChanged: (value) {},
+      validator: (value) {
+        if ( value == null ) return 'Campo es requerido';
+        if ( value.isEmpty ) return 'Campo es requerido';
+        if ( value.trim().isEmpty ) return 'Campo es requerido';
+
+        return null;
+      },
+      // * Para cambiar la apariencia física del input usamos el decoration: InputDecoration
+      decoration: InputDecoration(
+        enabledBorder: border,
+        focusedBorder: border.copyWith( borderSide: BorderSide(color: colors.primary) )
+      ),
+    );
+  }
+}
+```
+
+- Agregamos el `CustomTextFormField` en el `register_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: const _RegisterView(),
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatelessWidget {
+  const _RegisterForm();
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      child: Column(
+        
+        children: [
+
+          CustomTextFormField(),        // -> se agrego el CustomTextFormField
+
+          const SizedBox(height: 10),
+          
+          CustomTextFormField(),         // -> se agrego el CustomTextFormField
+
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {}, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+}
+```
+
+#### Finalizar el CustomTextFormField, se puede usar como base para crear cualquier widget con propiedades
+
+```dart
+import 'package:flutter/material.dart';
+
+class CustomTextFormField extends StatelessWidget {
+
+  final String? label;
+  final String? hint;
+  final String? errorMessage;
+  final Function(String)? onChanged;
+  final String? Function(String?)? validator;
+  final bool obscureText;
+
+  const CustomTextFormField({
+    super.key, 
+    this.label, 
+    this.hint, 
+    this.errorMessage, 
+    this.onChanged, 
+    this.validator, 
+    this.obscureText = false
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    final colors = Theme.of(context).colorScheme;
+
+    final border = OutlineInputBorder(
+      // borderSide: BorderSide(color: colors.primary),
+      borderRadius: BorderRadius.circular(40)
+    );
+
+    return TextFormField(
+      onChanged: onChanged,
+      validator: validator,
+      obscureText: obscureText,
+      // * Para cambiar la apariencia física del input usamos el decoration: InputDecoration
+      decoration: InputDecoration(
+        enabledBorder: border,
+        focusedBorder: border.copyWith( borderSide: BorderSide(color: colors.primary) ),
+        errorBorder: border.copyWith( borderSide: BorderSide(color: Colors.red.shade800) ),
+        focusedErrorBorder: border.copyWith( borderSide: BorderSide(color: Colors.red.shade800) ),
+
+        isDense: true,
+        label: label != null ? Text(label!) : null,
+        hintText: hint,
+        errorText: errorMessage,
+        focusColor: colors.primary
+      ),
+
+
+    );
+  }
+}
+```
+
+#### Formulario tradicional;
+
+- Transformamos el `_RegisterForm` en el archivo  `register_screen.dart` de un  `StatelessWidget` a  un `StatefulWidget` 
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: const _RegisterView(),
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatefulWidget {
+  const _RegisterForm();
+
+  @override
+  State<_RegisterForm> createState() => _RegisterFormState();
+}
+
+class _RegisterFormState extends State<_RegisterForm> {
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  String username = '';
+  String email = '';
+  String password = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+
+          CustomTextFormField(
+            label: 'Nombre de usuario',
+            onChanged: (value) => username = value,
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              if ( value.length < 6 ) return 'Más de 6 caracteres';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          CustomTextFormField(
+            label: 'Correo electrónico',
+            onChanged: (value) => email = value,
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              final emailRegExp = RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              );
+              if ( !emailRegExp.hasMatch(value) ) return 'No tiene formato de correo';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          CustomTextFormField(
+            label: 'Contraseña',
+            obscureText: true,
+            onChanged: (value) => password = value,
+             validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              if ( value.length < 6 ) return 'Más de 6 caracteres';
+              return null;
+            },
+            
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {
+
+              final isValid = _formKey.currentState!.validate();
+              if ( isValid ) return;
+
+              print('$username, $email, $password');
+            }, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+} 
+```
+
+
