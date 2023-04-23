@@ -1601,4 +1601,1152 @@ class _RegisterFormState extends State<_RegisterForm> {
 } 
 ```
 
+#### Register Form Cubit
 
+- Click derecho en la carpeta `blocs`, seleccionamos `Cubit: New Cubit`
+- Le colocamos el nombre de register y renombramos la carpeta cubit por register
+
+- Modificamos el archivo `register_state.dart`
+
+```dart
+part of 'register_cubit.dart';
+
+// * Determinar el estado completo del formulario
+enum FormStatus { invalid, valid, validating, posting }
+
+class RegisterFormState extends Equatable {
+
+  final FormStatus formStatus;
+  final String username;
+  final String email;
+  final String password;
+
+  const RegisterFormState({
+    this.formStatus = FormStatus.invalid, 
+    this.username = '', 
+    this.email = '', 
+    this.password = '',
+  });
+
+  RegisterFormState copyWith({
+    FormStatus? formStatus,
+    String? username,
+    String? email,
+    String ?password,
+  }) => RegisterFormState(
+    formStatus: formStatus ?? this.formStatus,
+    username: username ?? this.username,
+    email: email ?? this.email,
+    password: password ?? this.password,
+  );
+
+  @override
+  List<Object> get props => [ formStatus, username, email, password ];
+}
+```
+
+- Modificamos el archivo `regiister_cubit.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+
+part 'register_state.dart';
+
+class RegisterCubit extends Cubit<RegisterFormState> {
+  RegisterCubit() : super( const RegisterFormState() );
+
+  // * Metodos
+  void onSubmit() {
+    print('Submit: $state');
+  }
+
+  void usernameChanged( String value ) {
+    emit(
+      state.copyWith(
+        username: value,
+      )
+    );
+  }
+  void emailChanged( String value ) {
+    emit(
+      state.copyWith(
+        email: value,
+      )
+    );
+  }
+  void passwordChanged( String value ) {
+    emit(
+      state.copyWith(
+        password: value,
+      )
+    );
+  }
+}
+
+```
+
+
+#### Conectar Cubit con el Formulario
+
+- Modificamos el aarchivo `register_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:forms_app/presentation/blocs/register/register_cubit.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: BlocProvider(       // -> Usamos el BlocProvider
+        create: ( context ) => RegisterCubit(),
+        child:  const _RegisterView(),
+      )
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatefulWidget {
+  const _RegisterForm();
+
+  @override
+  State<_RegisterForm> createState() => _RegisterFormState();
+}
+
+class _RegisterFormState extends State<_RegisterForm> {
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  @override
+  Widget build(BuildContext context) {
+
+    //* Cada vez que el estado cambia se renderiza todo el build
+    final registerCubit = context.watch<RegisterCubit>();       // -> Se agrego
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+
+          CustomTextFormField(
+            label: 'Nombre de usuario',
+            onChanged: (value) {        // -> Se agrego
+              registerCubit.usernameChanged(value);
+              _formKey.currentState?.validate();
+            },
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              if ( value.length < 6 ) return 'Más de 6 caracteres';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 10),
+
+          CustomTextFormField(
+            label: 'Correo electrónico',
+            onChanged: (value) {        // -> Se agrego
+              registerCubit.emailChanged(value);
+              _formKey.currentState?.validate();
+            },
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              final emailRegExp = RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              );
+              if ( !emailRegExp.hasMatch(value) ) return 'No tiene formato de correo';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          CustomTextFormField(
+            label: 'Contraseña',
+            obscureText: true,
+            onChanged: (value) {        // -> Se agrego
+              registerCubit.passwordChanged(value);
+              _formKey.currentState?.validate();
+            },
+             validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              if ( value.length < 6 ) return 'Más de 6 caracteres';
+              return null;
+            },
+            
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {
+
+              final isValid = _formKey.currentState!.validate();
+              if ( isValid ) return;
+
+              registerCubit.onSubmit();     // -> Se agrego
+            }, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+}
+```
+
+#### Formz - Crear inputs individuales, permite validar y crear formularios
+
+Documentación: https://pub.dev/packages/formz
+
+- Instalación del paquete `flutter pub add formz`
+
+- Creamos la carpeta `infrastructure -> inputs`
+- Creamos el archivo `username.dart`
+
+```dart
+import 'package:formz/formz.dart';
+
+// Define input validation errors
+enum UsernameError { empty, length }
+
+// Extend FormzInput and provide the input type and error type.
+class Username extends FormzInput<String, UsernameError> {
+  // Call super.pure to represent an unmodified form input.
+  const Username.pure() : super.pure('');
+
+  // Call super.dirty to represent a modified form input.
+  const Username.dirty(String value) : super.dirty(value);
+
+  // Override validator to handle validating a given input value.
+  @override
+  UsernameError? validator(String value) {
+    if ( value.isEmpty || value.trim().isEmpty ) return UsernameError.empty;
+    if ( value.length < 6 ) return UsernameError.length;
+
+    return null;
+  }
+}
+```
+
+#### Usar los inputs personalizados
+
+- Modificamos el archivo `register_state.dar`
+
+```dart
+part of 'register_cubit.dart';
+
+// * Determinar el estado completo del formulario
+enum FormStatus { invalid, valid, validating, posting }
+
+class RegisterFormState extends Equatable {
+
+  final FormStatus formStatus;
+  final bool isValid;
+  final Username username;      // -> Agregamos el Username
+  final String email;
+  final String password;
+
+  const RegisterFormState({
+    this.formStatus = FormStatus.invalid, 
+    this.username = const Username.pure(),    // -> .pure() = valor por defecto
+    this.email = '', 
+    this.password = '',
+    this.isValid = false,
+  });
+
+  RegisterFormState copyWith({
+    FormStatus? formStatus,
+    Username? username,
+    String? email,
+    String ?password,
+    bool? isValid,
+
+  }) => RegisterFormState(
+    formStatus: formStatus ?? this.formStatus,
+    username: username ?? this.username,
+    email: email ?? this.email,
+    password: password ?? this.password,
+    isValid: isValid ?? this.isValid,
+  );
+
+  @override
+  List<Object> get props => [ formStatus, username, email, password, isValid ];
+}
+
+```
+
+- Modificamos el archivo `register_cubit.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:forms_app/infrastructure/inputs/inputs.dart';
+import 'package:formz/formz.dart';
+
+part 'register_state.dart';
+
+class RegisterCubit extends Cubit<RegisterFormState> {
+  RegisterCubit() : super( const RegisterFormState() );
+
+  // * Metodos
+  void onSubmit() {
+    print('Cubit Submit: $state');
+  }
+
+  void usernameChanged( String value ) {
+
+    final username = Username.dirty(value);
+
+    emit(
+      state.copyWith(
+        username: username,     // -> Se agrego
+        isValid: Formz.validate([ username ])       // -> Se agrego
+      )
+    );
+  }
+  void emailChanged( String value ) {
+    emit(
+      state.copyWith(
+        email: value,
+      )
+    );
+  }
+  void passwordChanged( String value ) {
+    emit(
+      state.copyWith(
+        password: value,
+      )
+    );
+  }
+}
+
+```
+
+#### password Custom Input
+
+- Creamos el archivo `password.dart`, en la carpeta `infrastructure -> inputs`
+
+```dart
+import 'package:formz/formz.dart';
+
+// Define input validation errors
+enum PasswordError { empty, length }
+
+// Extend FormzInput and provide the input type and error type.
+class Password extends FormzInput<String, PasswordError> {
+  // Call super.pure to represent an unmodified form input.
+  const Password.pure() : super.pure('');
+
+  // Call super.dirty to represent a modified form input.
+  const Password.dirty(String value) : super.dirty(value);
+
+  // Override validator to handle validating a given input value.
+  @override
+  PasswordError? validator(String value) {
+    if ( value.isEmpty || value.trim().isEmpty ) return PasswordError.empty;
+    if ( value.length < 6 ) return PasswordError.length;
+
+    return null;
+  }
+}
+```
+
+- Modificamos el `register_state.dart`
+
+```dart
+part of 'register_cubit.dart';
+
+// * Determinar el estado completo del formulario
+enum FormStatus { invalid, valid, validating, posting }
+
+class RegisterFormState extends Equatable {
+
+  final FormStatus formStatus;
+  final bool isValid;   
+  final Username username;
+  final String email;
+  final Password password;      // -> Agregamos isValid
+
+  const RegisterFormState({
+    this.formStatus = FormStatus.invalid, 
+    this.username = const Username.pure(),    
+    this.email = '', 
+    this.password = const Password.pure(),      // -> .pure() = valor por defecto
+    this.isValid = false,
+  });
+
+  RegisterFormState copyWith({
+    FormStatus? formStatus,
+    Username? username,
+    String? email,
+    Password ?password,     // -> Agregamos Password
+    bool? isValid,    
+
+  }) => RegisterFormState(
+    formStatus: formStatus ?? this.formStatus,
+    username: username ?? this.username,
+    email: email ?? this.email,
+    password: password ?? this.password,
+    isValid: isValid ?? this.isValid,   // -> Agregamos isValid
+  );
+
+  @override
+  List<Object> get props => [ formStatus, username, email, password, isValid ];   // -> Agregamos isValid
+}
+
+```
+
+- Modificamos el archivo `register_cubit.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:forms_app/infrastructure/inputs/inputs.dart';
+import 'package:formz/formz.dart';
+
+part 'register_state.dart';
+
+class RegisterCubit extends Cubit<RegisterFormState> {
+  RegisterCubit() : super( const RegisterFormState() );
+
+  // * Metodos
+  void onSubmit() {
+    print('Cubit Submit: $state');
+  }
+
+  void usernameChanged( String value ) {
+
+    final username = Username.dirty(value);
+
+    emit(
+      state.copyWith(
+        username: username,
+        isValid: Formz.validate([ username, state.password ])
+      )
+    );
+  }
+  void emailChanged( String value ) {
+    emit(
+      state.copyWith(
+        email: value,
+      )
+    );
+  }
+  void passwordChanged( String value ) {
+
+    final password = Password.dirty(value);     // -. Se agrego
+
+    emit(
+      state.copyWith(
+        password: password,     // -> Se agrego
+        isValid: Formz.validate([password, state.username])     // -> Se agrego
+      )
+    );
+  }
+}
+
+```
+
+
+#### Mostrar error en pantalla
+
+- Abrir el archivo `register_screen.dart` y quitar `final GlobalKey<FormState> _formKey = GlobalKey<FormState>();` y todo lo relacionado al `_formKey`
+
+- En el `_RegisterForm` cambiamos de `StatefulWidget` a `StatelessWidget` y todo deberia de funcionar bien
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:forms_app/presentation/blocs/register/register_cubit.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: BlocProvider(
+        create: ( context ) => RegisterCubit(),
+        child:  const _RegisterView(),
+      )
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatelessWidget {
+  const _RegisterForm();
+
+  @override
+  Widget build(BuildContext context) {
+
+    //* Cada vez que el estado cambia se renderiza todo el build
+    final registerCubit = context.watch<RegisterCubit>();
+    final username = registerCubit.state.username;
+    final password = registerCubit.state.password;
+
+    return Form(
+      child: Column(
+        children: [
+          CustomTextFormField(
+            label: 'Nombre de usuario',
+            onChanged: registerCubit.usernameChanged,
+            errorMessage: username.isPure || username.isValid
+              ? null
+              : 'Usuario no valido'
+          ),
+
+          const SizedBox(height: 10),
+
+          CustomTextFormField(
+            label: 'Correo electrónico',
+            onChanged: (value) {
+              registerCubit.emailChanged(value);
+            },
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              final emailRegExp = RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              );
+              if ( !emailRegExp.hasMatch(value) ) return 'No tiene formato de correo';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          CustomTextFormField(
+            label: 'Contraseña',
+            obscureText: true,
+            onChanged: (value) {
+              registerCubit.passwordChanged(value);
+            },
+             validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              if ( value.length < 6 ) return 'Más de 6 caracteres';
+              return null;
+            },
+            
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {
+
+              // final isValid = _formKey.currentState!.validate();
+              // if ( isValid ) return;
+
+              registerCubit.onSubmit();
+            }, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+}
+```
+
+- Modificamos el archivo `register_cubit.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:forms_app/infrastructure/inputs/inputs.dart';
+import 'package:formz/formz.dart';
+
+part 'register_state.dart';
+
+class RegisterCubit extends Cubit<RegisterFormState> {
+  RegisterCubit() : super( const RegisterFormState() );
+
+  // * Metodos
+  void onSubmit() {
+
+    emit(       // -> Se agrego el emit()
+      state.copyWith(
+        formStatus: FormStatus.validating,
+        username: Username.dirty(state.username.value),
+        password: Password.dirty(state.password.value),
+
+        isValid: Formz.validate([
+          state.username,
+          state.password,
+        ])
+      )
+    );
+
+    print('Cubit Submit: $state');
+  }
+
+  void usernameChanged( String value ) {
+
+    final username = Username.dirty(value);
+
+    emit(
+      state.copyWith(
+        username: username,
+        isValid: Formz.validate([ username, state.password ])
+      )
+    );
+  }
+  void emailChanged( String value ) {
+    emit(
+      state.copyWith(
+        email: value,
+      )
+    );
+  }
+  void passwordChanged( String value ) {
+
+    final password = Password.dirty(value);
+
+    emit(
+      state.copyWith(
+        password: password,
+        isValid: Formz.validate([password, state.username])
+      )
+    );
+  }
+}
+
+```
+
+#### Centralizar los errores en el input
+
+
+- Agregamos el siguiente código en el archivo `username.dart`
+
+```dart
+import 'package:formz/formz.dart';
+
+// Define input validation errors
+enum UsernameError { empty, length }
+
+// Extend FormzInput and provide the input type and error type.
+class Username extends FormzInput<String, UsernameError> {
+  // Call super.pure to represent an unmodified form input.
+  const Username.pure() : super.pure('');
+
+  // Call super.dirty to represent a modified form input.
+  const Username.dirty(String value) : super.dirty(value);
+
+  String? get errorMessage {        // -> Se agrego
+    if ( isValid || isPure ) return null;
+
+    if ( displayError == UsernameError.empty ) return 'El campo es requerido';
+    if ( displayError == UsernameError.length ) return 'Mínimo 6 caracteres';
+
+    return null;
+  }
+
+  // Override validator to handle validating a given input value.
+  @override
+  UsernameError? validator(String value) {
+    if ( value.isEmpty || value.trim().isEmpty ) return UsernameError.empty;
+    if ( value.length < 6 ) return UsernameError.length;
+
+    return null;
+  }
+}
+```
+
+- Agregamos el siguiente código en el archivo `password.dart`
+
+```dart
+import 'package:formz/formz.dart';
+
+// Define input validation errors
+enum PasswordError { empty, length }
+
+// Extend FormzInput and provide the input type and error type.
+class Password extends FormzInput<String, PasswordError> {
+  // Call super.pure to represent an unmodified form input.
+  const Password.pure() : super.pure('');
+
+  // Call super.dirty to represent a modified form input.
+  const Password.dirty(String value) : super.dirty(value);
+
+  String? get errorMessage {
+    if ( isValid || isPure ) return null;
+
+    if ( displayError == PasswordError.empty ) return 'El campo es requerido';
+    if ( displayError == PasswordError.length ) return 'Mínimo 6 caracteres';
+
+    return null;
+  }
+
+  // Override validator to handle validating a given input value.
+  @override
+  PasswordError? validator(String value) {
+    if ( value.isEmpty || value.trim().isEmpty ) return PasswordError.empty;
+    if ( value.length < 6 ) return PasswordError.length;
+
+    return null;
+  }
+}
+```
+
+- En el `register_screen.dart` usamos:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:forms_app/presentation/blocs/register/register_cubit.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: BlocProvider(
+        create: ( context ) => RegisterCubit(),
+        child:  const _RegisterView(),
+      )
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatelessWidget {
+  const _RegisterForm();
+
+  @override
+  Widget build(BuildContext context) {
+
+    //* Cada vez que el estado cambia se renderiza todo el build
+    final registerCubit = context.watch<RegisterCubit>();
+    final username = registerCubit.state.username;
+    final password = registerCubit.state.password;
+
+    return Form(
+      child: Column(
+        children: [
+          CustomTextFormField(
+            label: 'Nombre de usuario',
+            onChanged: registerCubit.usernameChanged,
+            errorMessage: username.errorMessage,
+          ),
+
+          const SizedBox(height: 10),
+
+          CustomTextFormField(
+            label: 'Correo electrónico',
+            onChanged: (value) {
+              registerCubit.emailChanged(value);
+            },
+            validator: (value) {
+              if ( value == null || value.isEmpty ) return 'Campo requerido';
+              if ( value.trim().isEmpty ) return 'Campo requerido';
+              final emailRegExp = RegExp(
+                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+              );
+              if ( !emailRegExp.hasMatch(value) ) return 'No tiene formato de correo';
+              return null;
+            },
+          ),
+
+          const SizedBox(height: 20),
+
+          CustomTextFormField(
+            label: 'Contraseña',
+            obscureText: true,
+            onChanged: registerCubit.passwordChanged,
+            errorMessage: password.errorMessage,
+            
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {
+              registerCubit.onSubmit();
+            }, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+}
+```
+
+
+#### Email Custom Input
+
+- Creamos el archivo `email.dart`
+
+```dart
+import 'package:formz/formz.dart';
+
+// Define input validation errors
+enum EmailError { empty, format }
+
+// Extend FormzInput and provide the input type and error type.
+class Email extends FormzInput<String, EmailError> {
+
+  static final RegExp emailRegExp =  RegExp(
+    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+  );
+
+  // Call super.pure to represent an unmodified form input.
+  const Email.pure() : super.pure('');
+
+  // Call super.dirty to represent a modified form input.
+  const Email.dirty(String value) : super.dirty(value);
+
+
+  String? get errorMessage {
+    if ( isValid || isPure ) return null;
+
+    if ( displayError == EmailError.empty ) return 'El campo es requerido';
+    if ( displayError == EmailError.format ) return 'No es un email valído';
+
+    return null;
+  }
+
+  // Override validator to handle validating a given input value.
+  // * Validaciones iniciales
+  @override
+  EmailError? validator(String value) {
+
+    if ( value.isEmpty || value.trim().isEmpty ) return EmailError.empty;
+    if ( !emailRegExp.hasMatch(value) ) return EmailError.format;
+
+    return null;
+  }
+}
+```
+
+- Modificamos el archivo `register_state.dart`
+
+```dart
+part of 'register_cubit.dart';
+
+// * Determinar el estado completo del formulario
+enum FormStatus { invalid, valid, validating, posting }
+
+class RegisterFormState extends Equatable {
+
+  final FormStatus formStatus;
+  final bool isValid;   
+  final Username username;
+  final Email email;
+  final Password password;
+
+  const RegisterFormState({
+    this.formStatus = FormStatus.invalid, 
+    this.username = const Username.pure(),
+    this.email = const Email.pure(), 
+    this.password = const Password.pure(),
+    this.isValid = false,
+  });
+
+  RegisterFormState copyWith({
+    FormStatus? formStatus,
+    Username? username,
+    Email? email,
+    Password ?password,
+    bool? isValid,
+
+  }) => RegisterFormState(
+    formStatus: formStatus ?? this.formStatus,
+    username: username ?? this.username,
+    email: email ?? this.email,
+    password: password ?? this.password,
+    isValid: isValid ?? this.isValid,
+  );
+
+  @override
+  List<Object> get props => [ formStatus, username, email, password, isValid ];
+}
+
+```
+
+- Modificamos el archivo `register_cubit.dart`
+
+```dart
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:forms_app/infrastructure/inputs/inputs.dart';
+import 'package:formz/formz.dart';
+
+part 'register_state.dart';
+
+class RegisterCubit extends Cubit<RegisterFormState> {
+  RegisterCubit() : super( const RegisterFormState() );
+
+  // * Metodos
+  void onSubmit() {
+
+    emit(
+      state.copyWith(
+        formStatus: FormStatus.validating,
+        username: Username.dirty(state.username.value),
+        password: Password.dirty(state.password.value),
+        email: Email.dirty(state.email.value),
+
+        isValid: Formz.validate([
+          state.username,
+          state.password,
+          state.email
+        ])
+      )
+    );
+
+    print('Cubit Submit: $state');
+  }
+
+  void usernameChanged( String value ) {
+
+    final username = Username.dirty(value);
+
+    emit(
+      state.copyWith(
+        username: username,
+        isValid: Formz.validate([ username, state.password, state.email ])
+      )
+    );
+  }
+  void emailChanged( String value ) {
+
+    final email = Email.dirty(value);
+
+    emit(
+      state.copyWith(
+        email: email,
+        isValid: Formz.validate([ email, state.username, state.password ])
+      )
+    );
+  }
+  void passwordChanged( String value ) {
+
+    final password = Password.dirty(value);
+
+    emit(
+      state.copyWith(
+        password: password,
+        isValid: Formz.validate([password, state.username, state.email])
+      )
+    );
+  }
+}
+
+```
+
+- Modificacion en el archivo `register_screen.dart`
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:forms_app/presentation/blocs/register/register_cubit.dart';
+import 'package:forms_app/presentation/widgets/widgets.dart';
+
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nuevo usuario'),
+      ),
+      body: BlocProvider(
+        create: ( context ) => RegisterCubit(),
+        child:  const _RegisterView(),
+      )
+    );
+  }
+}
+
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: SingleChildScrollView(
+          child: Column(
+            // mainAxisAlignment: MainAxisAlignment.end,
+            children: const [
+        
+              FlutterLogo( size: 100 ),
+        
+              _RegisterForm(),
+
+              SizedBox(height: 20),
+        
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterForm extends StatelessWidget {
+  const _RegisterForm();
+
+  @override
+  Widget build(BuildContext context) {
+
+    //* Cada vez que el estado cambia se renderiza todo el build
+    final registerCubit = context.watch<RegisterCubit>();
+    final username = registerCubit.state.username;
+    final password = registerCubit.state.password;
+    final email = registerCubit.state.email;
+
+    return Form(
+      child: Column(
+        children: [
+          CustomTextFormField(
+            label: 'Nombre de usuario',
+            onChanged: registerCubit.usernameChanged,
+            errorMessage: username.errorMessage,
+          ),
+
+          const SizedBox(height: 10),
+
+          CustomTextFormField(
+            label: 'Correo electrónico',
+            onChanged: registerCubit.emailChanged,
+            errorMessage: email.errorMessage,
+          ),
+
+          const SizedBox(height: 20),
+
+          CustomTextFormField(
+            label: 'Contraseña',
+            obscureText: true,
+            onChanged: registerCubit.passwordChanged,
+            errorMessage: password.errorMessage,
+            
+          ),
+          const SizedBox(height: 20),
+
+          FilledButton.tonalIcon(
+            onPressed: () {
+              registerCubit.onSubmit();
+            }, 
+            icon: const Icon( Icons.save ), 
+            label: const Text('Crear usuario')
+          ),
+
+        ],
+
+      ),
+    );
+  }
+}
+```
